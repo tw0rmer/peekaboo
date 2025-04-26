@@ -90,3 +90,33 @@ These changes resolved the build issues in the GitHub Actions workflow:
 3. Be aware of Android Gradle Plugin version compatibility with compileSdk versions
 4. For Android 12+ (API level 31+), explicitly set android:exported for components with intent filters
 5. Use the namespace in build.gradle instead of package attribute in AndroidManifest.xml
+## Subsequent Build Issues & Fixes (After Initial Fixes)
+
+### Issue 6: Missing Mipmap Resources
+- **Error:** Android resource linking failed, resource `mipmap/ic_launcher` and `mipmap/ic_launcher_round` not found.
+- **Cause:** The `app/src/main/AndroidManifest.xml` referenced `android:icon="@mipmap/ic_launcher"` and `android:roundIcon="@mipmap/ic_launcher_round"`, but the corresponding `mipmap-*` resource directories and files were missing from `app/src/main/res/`.
+- **Solution:** Removed the `android:icon` and `android:roundIcon` attributes from the `<application>` tag in `app/src/main/AndroidManifest.xml`.
+
+### Issue 7: JVM Target Mismatch (Java vs. Kotlin)
+- **Error:** Execution failed for task ':app:compileDebugKotlin'. 'compileDebugJavaWithJavac' task (current target is 1.8) and 'compileDebugKotlin' task (current target is 17) jvm target compatibility should be set to the same Java version.
+- **Cause:** The Kotlin compiler was set to target JVM 17 (via `kotlinOptions`), but the Java compiler defaulted to target 1.8. The GitHub Actions runner was using Java 17.
+- **Solution:** Added a `compileOptions` block within the `android` block in `app/build.gradle` to explicitly set the Java source and target compatibility to Java 17, matching the Kotlin target and the runner's Java version.
+  ```gradle
+  compileOptions {
+      sourceCompatibility JavaVersion.VERSION_17
+      targetCompatibility JavaVersion.VERSION_17
+  }
+  ```
+- **Git Note:** Ensured changes were staged (`git add`), committed (`git commit`), and pushed (`git push`) correctly to trigger the GitHub Actions workflow.
+### Issue 8: Build Artifact (APK) Not Uploaded
+- **Problem:** The GitHub Actions workflow completed successfully, but the generated APK file was not available for download as an artifact.
+- **Cause:** The `.github/workflows/android.yml` file was missing a step to upload the build output using the `actions/upload-artifact` action.
+- **Solution:** Added a final step to the `build` job in `.github/workflows/android.yml` to upload the debug APK.
+  ```yaml
+    - name: Upload Debug APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-debug-apk # Name of the artifact on GitHub
+        path: app/build/outputs/apk/debug/app-debug.apk # Path to the generated APK
+  ```
+- **Note:** Corrected YAML indentation errors that occurred during the initial attempt to add this step.
