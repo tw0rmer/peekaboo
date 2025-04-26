@@ -1,0 +1,37 @@
+# Gradle files
+.gradle/
+build/
+**/build/
+
+# Local configuration file (sdk path, etc)
+local.properties
+
+# Log/OS files
+*.log
+*.swp
+.DS_Store
+
+# Android Studio/IntelliJ
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Keystore files
+*.jks
+*.keystore
+
+# Misc
+captures/
+output.json
+
+# Mac OS
+__MACOSX/
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Other
+*.class
